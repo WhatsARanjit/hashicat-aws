@@ -1,5 +1,5 @@
 provider "aws" {
-  version = "~> 2.0"
+  version = "~> 3.0"
   region  = var.region
 }
 
@@ -8,7 +8,8 @@ resource "aws_vpc" "hashicat" {
   enable_dns_hostnames = true
 
   tags = {
-    name = "${var.prefix}-vpc"
+    name = "${var.prefix}-vpc-${var.region}"
+    environment = "Production"
   }
 }
 
@@ -162,13 +163,16 @@ resource "null_resource" "configure-cat-app" {
 
   provisioner "remote-exec" {
     inline = [
-      "sudo add-apt-repository universe",
+      "sudo apt -y update",
+      "sleep 15",
       "sudo apt -y update",
       "sudo apt -y install apache2",
       "sudo systemctl start apache2",
       "sudo chown -R ubuntu:ubuntu /var/www/html",
       "chmod +x *.sh",
       "PLACEHOLDER=${var.placeholder} WIDTH=${var.width} HEIGHT=${var.height} PREFIX=${var.prefix} ./deploy_app.sh",
+      "sudo apt -y install cowsay",
+      "cowsay Mooooooooooo!",
     ]
 
     connection {
@@ -185,7 +189,7 @@ resource "tls_private_key" "hashicat" {
 }
 
 locals {
-  private_key_filename = "${var.prefix}-ssh-key.pem"
+  private_key_filename = "${random_id.app-server-id.dec}-ssh-key.pem"
 }
 
 resource "aws_key_pair" "hashicat" {
